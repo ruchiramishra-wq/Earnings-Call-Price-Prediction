@@ -1,0 +1,17 @@
+universe:
+  source: earnings_transcripts
+  min_price: 5.0
+
+returns:
+  horizons: [1, 5]
+  benchmark: SPY
+
+labels:
+  type: classification
+  target: abnormal_return
+  threshold: 0.0
+
+splits:
+  method: time
+  train_end_year: 2018
+  test_start_year: 2019
