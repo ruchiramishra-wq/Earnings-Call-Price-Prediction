@@ -33,3 +33,4 @@ fastparquet
 # General utilities
 python-dateutil
 
+python-dotenv
