@@ -27,7 +27,7 @@ def earnings_call_prepare(DATA_PATH=MOTLEY_FOOL_DATA_PATH, get_tickers_only=Fals
         .str.replace('p.m.', 'PM', regex=False)
         .str.strip()
     )
-    earnings_call_data['date'] = pd.to_datetime(earnings_call_data['date'])
+    earnings_call_data['date'] = pd.to_datetime(earnings_call_data['date'], format='mixed', errors='coerce')
 
     earnings_call_data['adjusted_date'] = earnings_call_data['date'].apply(
         lambda x: x + pd.offsets.BDay(1) if x.hour >= 16 else x
@@ -214,7 +214,7 @@ def format_earnings_data(df_with_market, earnings_call_data):
         .merge(abncallday20_long, on=['adjusted_date', 'ticker'], how='left')
     )
 
-    clean_df = earnings_call_data.dropna()
+    clean_df = earnings_call_data.copy().dropna()
     clean_df['r1d_direction'] = (clean_df['abret_1d'] > 0).astype(int)
     clean_df['r5d_direction'] = (clean_df['abret_5d'] > 0).astype(int)
     final_df = clean_df[
