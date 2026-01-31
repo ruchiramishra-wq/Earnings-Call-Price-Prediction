@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
 from data_cleaning_util import prepare_earnings_data
 import re
-from finbert_models_utils import bootstrap_auc_ci
+from finbert_models_utils import bootstrap_auc_se
 
 
 FOOTER_MARKERS = [
@@ -339,22 +339,28 @@ def call_baseline_model(MODEL = "random", RETURNS_PERIOD = 5):
         logit_random,accuracy_random, auc_random = random_model(y_train, y_test)
         results['accuracy'] = accuracy_random
         results['auc'] = auc_random
-        results['ci']=bootstrap_auc_ci(y_test, logit_random)
-        print(f"Random Model - Accuracy: {accuracy_random:.4f}, AUC: {auc_random:.4f}, CI: {results['ci']}")
+        ci,se=bootstrap_auc_se(y_test, logit_random)
+        results['ci']=ci
+        results['se']=se
+        print(f"Random Model - Accuracy: {accuracy_random:.4f}, AUC: {auc_random:.4f} ± {se:.4f}, CI: {results['ci']}")
 
     elif MODEL == "finance_only":
         logit_fin,accuracy_fin, auc_fin = finance_only_logistic_regression(X_train_fin, y_train, X_test_fin, y_test)
         results['accuracy'] = accuracy_fin
         results['auc'] = auc_fin
-        results['ci']=bootstrap_auc_ci(y_test, logit_fin)
-        print(f"Finance Only Model - Accuracy: {accuracy_fin:.4f}, AUC: {auc_fin:.4f}, CI: {results['ci']}")
+        ci,se=bootstrap_auc_se(y_test, logit_fin)
+        results['ci']=ci
+        results['se']=se
+        print(f"Finance Only Model - Accuracy: {accuracy_fin:.4f}, AUC: {auc_fin:.4f} ± {se:.4f}, CI: {results['ci']}")
 
     elif MODEL == "tfidf":
         logit_tfidf,best_test_auc, best_test_accuracy = tfidf_run(train_df, val_df, test_df, y_train, y_val, y_test)
         results['auc'] = best_test_auc
         results['accuracy'] = best_test_accuracy
-        results['ci']=bootstrap_auc_ci(y_test, logit_tfidf)
-        print(f"TF-IDF Model - Accuracy: {best_test_accuracy:.4f}, AUC: {best_test_auc:.4f}, CI: {results['ci']}")
+        ci,se=bootstrap_auc_se(y_test, logit_tfidf)
+        results['ci']=ci
+        results['se']=se
+        print(f"TF-IDF Model - Accuracy: {best_test_accuracy:.4f}, AUC: {best_test_auc:.4f} ± {se:.4f}, CI: {results['ci']}")
 
     elif MODEL == "finance_tfidf":
         X_train_tfidf, X_val_tfidf, X_test_tfidf = tfidf_vectorize(train_df, val_df, test_df)
@@ -362,8 +368,8 @@ def call_baseline_model(MODEL = "random", RETURNS_PERIOD = 5):
                                           X_train_tfidf, X_test_tfidf)
         results['auc'] = test_auc
         results['accuracy'] = test_accuracy
-        results['ci']=bootstrap_auc_ci(y_test, logit_tfidf_fin)
-        print(f"Finance + TF-IDF Model - Accuracy: {test_accuracy:.4f}, AUC: {test_auc:.4f}, CI: {results['ci']}")
+        ci,se=bootstrap_auc_se(y_test, logit_tfidf_fin)
+        print(f"Finance + TF-IDF Model - Accuracy: {test_accuracy:.4f}, AUC: {test_auc:.4f} ± {se:.4f}, CI: {results['ci']}")
 
     return "Success"
 
@@ -371,7 +377,7 @@ def main():
     models = ["random", "finance_only", "tfidf", "finance_tfidf"]
     for model in models:
         results = call_baseline_model(MODEL=model, RETURNS_PERIOD=5)
-        print(f"Model: {model}, Accuracy: {results['accuracy']:.4f}, AUC: {results['auc']:.4f}")
+        print(f"Model: {model}, Accuracy: {results['accuracy']:.4f}, AUC: {results['auc']:.4f}± {results['se']:.4f}, CI: {results['ci']}")
 
 if __name__ == "__main__":
     main()

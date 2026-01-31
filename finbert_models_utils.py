@@ -530,9 +530,9 @@ def load_cached_finbert_fin_dataset(split,return_days=1,cache_dir=CACHE_DIR,batc
     return dataloader
 
 
-def bootstrap_auc(y_true, y_scores, n_bootstraps=1000, random_seed=42):
+def bootstrap_auc_se(y_true, y_scores, n_bootstraps=1000, random_seed=42):
     """
-    Computes bootstrap confidence intervals for AUC.
+    Computes bootstrap confidence intervals and standard error for AUC.
 
     Args:
         y_true (array-like): True binary labels.
@@ -541,6 +541,7 @@ def bootstrap_auc(y_true, y_scores, n_bootstraps=1000, random_seed=42):
         random_seed (int): Random seed for reproducibility.
     Returns:
         tuple: (lower_bound, upper_bound) of 95% confidence interval for AUC
+        int: standard error of AUC
     """
     import numpy as np
 
@@ -562,8 +563,9 @@ def bootstrap_auc(y_true, y_scores, n_bootstraps=1000, random_seed=42):
 
     lower_bound = sorted_scores[int(0.025 * len(sorted_scores))]
     upper_bound = sorted_scores[int(0.975 * len(sorted_scores))]
+    se = np.std(bootstrapped_scores)
 
-    return lower_bound, upper_bound
+    return (lower_bound, upper_bound), se
 
 def call_model(Model="AttnMLPPoolClassifier",dim=768, attn_hidden=256, hidden=256, dropout=0.2,return_period=1):
     """
@@ -601,14 +603,14 @@ def call_model(Model="AttnMLPPoolClassifier",dim=768, attn_hidden=256, hidden=25
 
     test_logits,test_loss, test_auc = eval_loop_auc(model, test_loader, device)
 
-    test_auc_ci = bootstrap_auc(
+    test_auc_ci,test_se = bootstrap_auc_se(
         y_true=[y for _, _, y in test_loader.dataset],
         y_scores=test_logits,
         n_bootstraps=1000,
         random_seed=42,
     )
 
-    return model, test_loss, test_auc, test_auc_ci
+    return model, test_loss, test_auc, test_auc_ci,test_se
 
 def call_model_fin(Model="AttnPoolTwoTower",dim=768, fin_dim=4, hidden=256, dropout=0.2,return_period=1):
     """
@@ -641,13 +643,13 @@ def call_model_fin(Model="AttnPoolTwoTower",dim=768, fin_dim=4, hidden=256, drop
 
     test_logits,test_loss, test_auc = eval_loop_auc_fin(model, test_loader, device)
 
-    test_auc_ci = bootstrap_auc(
+    test_auc_ci,test_se = bootstrap_auc_se(
         y_true=[y for _, _, _, y in test_loader.dataset],
         y_scores=test_logits,
         n_bootstraps=1000,
         random_seed=42,
     )
 
-    return model, test_loss, test_auc, test_auc_ci
+    return model, test_loss, test_auc, test_auc_ci,test_se
 
 
