@@ -20,3 +20,7 @@ Else, download to local and read pkl file.
 # Target Definition 
 
 # Transcript 
+
+# Results 
+
+While doing the bootstrapping to get the confidence intervals of the AUC score, we assume that the points are IID which is not necessarily true in financial datasets. 
