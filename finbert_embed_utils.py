@@ -2,7 +2,7 @@ import os, glob, hashlib, shutil
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoModel, AutoTokenizer
-
+from baseline_models import test_train_split_by_date, scale_features
 
 
 def setup_finbert():
@@ -158,39 +158,6 @@ def build_cache(data, cache_dir, encoder, tokenizer, device, overlap=0):
     print(f"Cached {len(data)} transcripts → {cache_dir}")
 
 
-class CachedDataset(Dataset):
-    """
-    Dataset for loading cached FinBERT embeddings and labels.
-    """
-    def __init__(self, cache_dir):
-        self.paths = glob.glob(os.path.join(cache_dir, "*.pt"))
-
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, idx):
-        obj = torch.load(self.paths[idx], map_location="cpu")
-        return obj["Z"].float(), torch.tensor(obj["y"], dtype=torch.float32)
-
-
-class CachedZFinDataset(Dataset):
-    """
-    Dataset for loading cached FinBERT embeddings, financial features, and labels.
-    """
-    def __init__(self, cache_dir):
-        self.paths = sorted(glob.glob(os.path.join(cache_dir, "*.pt")))
-
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, idx):
-        obj = torch.load(self.paths[idx], map_location="cpu")
-        Z = obj["Z"].float()  # (C,768)
-        y = torch.tensor(obj["y"], dtype=torch.float32)
-        fin = obj["fin_features"].float().view(-1)
-        return Z, fin, y
-    
-
 def zip_cache(cache_dir, zip_path):
     """
     Zips the entire cache directory into a single .zip file.
@@ -203,4 +170,34 @@ def zip_cache(cache_dir, zip_path):
     )
     print(f"Created zip file: {zip_path}")
 
+
+
+def create_finbert_cache(raw_data,cache_dir,return_days=1,overlap=50):
+    """
+    High-level function to create FinBERT cache from raw data.
+    First split data by date into train/val/test, scale financial features, zip them and then input to create finbert cache.
+
+    Args:
+        data: List of tuples (transcript, label, fin_features).
+        cache_dir: Directory to store cached embeddings.
+        overlap: Number of overlapping tokens between consecutive chunks.
+    """
+    encoder, tokenizer, device = setup_finbert()
+
+    train_data, val_data, test_data = test_train_split_by_date(raw_data)
+    train_features,val_features, test_features = scale_features(train_data, val_data, test_data,["abvol_20d", "abcallday_r1", "abcallday_r5", "abcallday_r20"])
+    train_transcripts,val_transcripts,test_transcripts=train_data["transcript"].tolist(),val_data["transcript"].tolist(),test_data["transcript"].tolist()
     
+    if return_days==1:
+        y_train_1d,y_val_1d,y_tet_1d=train_data["r1d_direction"],val_data["r1d_direction"],test_data["r1d_direction"]
+    else:
+        y_train_1d,y_val_1d,y_tet_1d=train_data["r5d_direction"],val_data["r5d_direction"],test_data["r5d_direction"]
+    
+    train_data, val_data, test_data = list(zip(train_transcripts, y_train_1d, train_features)), list(zip(val_transcripts, y_val_1d, val_features)), list(zip(test_transcripts, y_tet_1d, test_features))
+    
+    for data, split in zip([train_data, val_data, test_data], ["train", "val", "test"]):
+        split_cache_dir = os.path.join(cache_dir, split)    
+        build_cache(data, split_cache_dir, encoder, tokenizer, device, overlap=overlap)
+        zip_cache(split_cache_dir, f"cache_{split}_{return_days}"+".zip")
+
+

@@ -3,7 +3,42 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import roc_auc_score
+import os
+from torch.utils.data import Dataset
+import glob
 
+class CachedDataset(Dataset):
+    """
+    Dataset for loading cached FinBERT embeddings and labels.
+    """
+    def __init__(self, cache_dir):
+        self.paths = glob.glob(os.path.join(cache_dir, "*.pt"))
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, idx):
+        obj = torch.load(self.paths[idx], map_location="cpu")
+        return obj["Z"].float(), torch.tensor(obj["y"], dtype=torch.float32)
+
+
+class CachedZFinDataset(Dataset):
+    """
+    Dataset for loading cached FinBERT embeddings, financial features, and labels.
+    """
+    def __init__(self, cache_dir):
+        self.paths = sorted(glob.glob(os.path.join(cache_dir, "*.pt")))
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, idx):
+        obj = torch.load(self.paths[idx], map_location="cpu")
+        Z = obj["Z"].float()  # (C,768)
+        y = torch.tensor(obj["y"], dtype=torch.float32)
+        fin = obj["fin_features"].float().view(-1)
+        return Z, fin, y
+    
 
 def collate_pad(batch):
     """Pads variable-length sequences in the batch with zeros to help with batching.""" 
@@ -442,3 +477,88 @@ Stops training if validation AUC does not improve for a specified number of epoc
     # load best weights before returning
     model.load_state_dict(torch.load(save_path, map_location=device))
     return model
+
+
+def load_cached_finbert_dataset(cache_dir,split,batch_size=16,shuffle=True):
+    """
+    Loads a cached FinBERT dataset from disk.
+
+    Args:
+        cache_dir: Directory where cached embeddings are stored.
+        split: One of "train", "val", or "test".
+        batch_size: Batch size for DataLoader.
+        shuffle: Whether to shuffle the data.
+        collate_fn: Function to collate batches 
+    Returns:
+        DataLoader for the specified split.
+    """
+    from torch.utils.data import DataLoader
+
+    split_cache_dir = os.path.join(cache_dir, split)
+    dataset = CachedDataset(split_cache_dir)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_pad)
+    return dataloader
+
+def load_cached_finbert_fin_dataset(cache_dir, split,batch_size=16,shuffle=True):
+    """
+    Loads a cached FinBERT dataset with financial features from disk.
+
+    Args:
+        cache_dir: Directory where cached embeddings are stored.
+        split: One of "train", "val", or "test".
+        batch_size: Batch size for DataLoader.
+        shuffle: Whether to shuffle the data.
+        collate_fn: Function to collate batches 
+    Returns:
+        DataLoader for the specified split.
+    """
+    from torch.utils.data import DataLoader
+
+    split_cache_dir = os.path.join(cache_dir, split)
+    dataset = CachedZFinDataset(split_cache_dir)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_pad_chunks_with_fin)
+    return dataloader
+
+def call_model(Model=AttnMLPPoolClassifier,return_period=1):
+    """
+    trains the specifed model at the given return period and returns the trained model, test loss and test AUC.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    cache_dir = f"./cached_finbert_embeddings/finbert_{return_period}r"
+
+    train_loader = load_cached_finbert_dataset(
+        cache_dir, split="train", batch_size=16, shuffle=True
+    )
+    val_loader = load_cached_finbert_dataset(
+        cache_dir, split="val", batch_size=16, shuffle=False
+    )
+    test_loader = load_cached_finbert_dataset(
+        cache_dir, split="test", batch_size=16, shuffle=False
+    )
+
+    model = Model().to(device)
+
+    model = train_with_early_stopping(
+        model,
+        train_loader,
+        val_loader,
+        device,
+        max_epochs=50,
+        patience=7,
+        lr=1e-3,
+        weight_decay=1e-2,
+        save_path=f"best_model_{return_period}r.pt",
+    )
+
+    test_loss, test_auc = eval_loop_auc(model, test_loader, device)
+
+    return model, test_loss, test_auc
