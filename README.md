@@ -17,7 +17,7 @@ Earnings calls contain valuable qualitative information (management tone, forwar
 ### Target Variable
 Binary classification: Market-adjusted return (subtract the market return value) increases vs decreases N days post-earnings:
 -abn_return=stock_return-market_return
--where $return_{n_days}=(Price_t+n -Price_t)/Price_t$
+-where n-day return is defined as $\text{return}_{n}=(\text{Price}_{t+n}-\text{Price}_t)/Price_t$
                    
 ### Feature Engineering
 **Text Features:**
