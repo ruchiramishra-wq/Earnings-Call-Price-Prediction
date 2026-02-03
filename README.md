@@ -9,23 +9,26 @@ Earnings calls contain valuable qualitative information (management tone, forwar
 ## Data
 - **Transcripts**: Motley Fool earnings call transcripts
 - **Financial Data**: S&P 500 price data, Yahoo finance
-- **Time Period**: 
-- **Sample Size**: 
+- **Time Period**: 2019-04-17 to 2022-12-01
+- **Sample Size**: 3544 
 
 ## Methodology
 
 ### Target Variable
-Binary classification: Market-adjusted stock price increases vs decreases N days post-earnings 
-- 1-day horizon: (Price_t+1 - Price_t) / Price_t > 0
-- 5-day horizon: (Price_t+5 - Price_t) / Price_t > 0
-
+Binary classification: Market-adjusted return (subtract the market return value) increases vs decreases N days post-earnings:
+                   abn_return=stock_return-market_return
+where return_{n days}=(Price_t+n -Price_t)/Price_t
+                   
 ### Feature Engineering
 **Text Features:**
-- TF-IDF: 
-- FinBERT Embeddings: 
-
+- TF-IDF: TF-IDF represents documents as sparse vectors that weight words by their frequency in a document and their rarity across the corpus.
+- FinBERT Embeddings: We use the FinBERT model (BERT model trained on financial data) to get vectors for each transcript by doing mean-pooling and attention pooling over chunks. 
+  
 **Financial Features:**
-- 
+- Market adjusted historical 20-day volatility (where volatility=standard deviation)
+- Historical 1-day market-adjusted return
+- Historical 5-day market-adjusted return
+- Historical 20-day market-adjusted return
 
 ### Models Compared
 1. Random Baseline
@@ -54,9 +57,11 @@ Binary classification: Market-adjusted stock price increases vs decreases N days
 - Test on different market periods (bull vs bear)
 - Extend to longer time horizons
 - Add technical indicators
+- Try regression instead of classification
 
 ## Setup & Usage
 Installation instructions:
 How to run the code:
 
 ## References
+Huang, Allen H., Hui Wang, and Yi Yang. "FinBERT: A Large Language Model for Extracting Information from Financial Text." Contemporary Accounting Research (2022).
