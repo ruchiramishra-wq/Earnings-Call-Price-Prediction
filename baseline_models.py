@@ -371,8 +371,10 @@ def call_baseline_model(df = None, MODEL = "random", RETURNS_PERIOD = 5):
         results['ci']=ci
         results['se']=se
         print(f"Finance + TF-IDF Model {RETURNS_PERIOD}-day returns- Accuracy: {test_accuracy:.4f}, AUC: {test_auc:.4f} ± {se:.4f}, CI: {results['ci']}")
+    
+    result_df = pd.DataFrame([results])
 
-    return "Success"
+    return result_df
 
 def main():
     models = ["random", "finance_only", "tfidf", "finance_tfidf"]
