@@ -37,8 +37,6 @@ Binary classification: Market-adjusted return (subtract the market return value)
 4. Neural Network + FinBERT (mean pooling)
 5. Neural Network + FinBERT (attention pooling)
 6. Neural Network + FinBERT + financial features
-7. SVM + FinBERT
-8. SVM + FinBERT + financial features
 
 ### Validation
 - Time-based train/validation/test splits (prevents lookahead bias)
