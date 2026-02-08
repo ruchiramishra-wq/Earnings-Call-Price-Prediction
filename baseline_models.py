@@ -118,7 +118,7 @@ def random_model(y_train,y_test,seed=42):
     rng=np.random.default_rng(seed=seed)
     p_threshold=y_train.sum()/len(y_train)
     p_pred_random=rng.uniform(size=len(y_test)) #generates probabilities randomly
-    y_pred_random = (p_pred_random >= 1-p_threshold).astype(int) #converts probabilities to class labels based on 1-p_5d_train threshold
+    y_pred_random = (p_pred_random >= 1-p_threshold).astype(int) #converts probabilities to class labels based on 1-p_train threshold
 
     accuracy_random = accuracy_score(y_test, y_pred_random)
     auc_random=roc_auc_score(y_test, p_pred_random)
@@ -153,8 +153,7 @@ def finance_only_logistic_regression(X_train_fin, y_train, X_test_fin, y_test,C=
 
 def clean_transcript(text,FOOTER_MARKERS = FOOTER_MARKERS,HONORIFIC_NAME_PATTERN = HONORIFIC_NAME_PATTERN,keep_section="prepared"):
     """
-    Docstring for clean_transcript
-    
+    Cleans the transcript text    
     """
     if text is None:
         return ""
