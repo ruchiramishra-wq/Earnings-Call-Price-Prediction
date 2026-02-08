@@ -118,10 +118,6 @@ def get_sp500_data(
     spy_series.index = pd.to_datetime(spy_series.index).normalize()
     spy_series = spy_series.sort_index()
 
-    # NOTE: your original code expects these market-return columns to exist after merge:
-    # m_r1d, m_r5d, m_bcallday_r1, m_bcallday_r5, m_bcallday_r20
-    # It wasn't defined in your snippet, so I'm preserving your logic structure,
-    # but to avoid breaking, we compute them here with minimal intrusion.
     market = pd.DataFrame(index=spy_series.index)
     market["Close"] = spy_series
     market["m_bcallday_r1"] = market["Close"].pct_change(1).shift(1)
