@@ -257,14 +257,15 @@ def tfidf_run(train_df, val_df, test_df, y_train, y_val, y_test, return_top_word
             best_val_auc = val_auc
             best_val_accuracy = val_accuracy
             best_C = C
-            best_model = text_model(C=best_C)
+            best_model = text_model
 
     best_test_probs = best_model.predict_proba(X_test_tfidf)[:, 1]
     best_test_auc = roc_auc_score(y_test, best_test_probs)
     best_test_accuracy = accuracy_score(y_test, best_model.predict(X_test_tfidf))
+    print('Best C for TF-IDF model:', best_C)
 
     if not return_top_words:
-        return best_probs,best_test_auc, best_test_accuracy
+        return best_test_probs,best_test_auc, best_test_accuracy
 
     try:
         vectorizer = getattr(tfidf_vectorize, "vectorizer", None)
@@ -278,38 +279,49 @@ def tfidf_run(train_df, val_df, test_df, y_train, y_val, y_test, return_top_word
     top_idx = np.argsort(np.abs(coefs))[::-1][:50] 
     top_words = [feature_names[i] for i in top_idx]
 
-    return best_probs,best_test_auc, best_test_accuracy, top_words
+    return best_test_probs,best_test_auc, best_test_accuracy, top_words
 
 
-def finance_tfidf_model(features_base_train, y_train, features_base_val, X_val_tfidf,  features_base_test, y_test,
-                        X_train_tfidf, X_test_tfidf, C=1.0):
+def finance_tfidf_model(features_base_train, y_train, features_base_val, y_val, X_val_tfidf,  
+                        features_base_test, y_test, X_train_tfidf, X_test_tfidf):
     '''
     Implements a logistic regression model using both financial and TF-IDF text features.
-    
-    Parameters:
-    - features_base_train: array-like, financial features for the training set.
-    - y_train: array-like, true labels for the training set.
-    - features_base_test: array-like, financial features for the test set.
-    - y_test: array-like, true labels for the test set.
-    - X_train_tfidf: array-like, TF-IDF text features for the training set.
-    - X_test_tfidf: array-like, TF-IDF text features for the test set.
-    - C: float, inverse of regularization strength for logistic regression.
+    Picks the C that maximizes val AUC and evaluates on test set.
 
     Returns:
-    - accuracy_combined: float, accuracy of the combined model on the test set.
-    - auc_combined: float, AUC of the combined model on the test set. 
+    - test_probs: array-like, predicted probabilities on test set.
+    - test_auc: float, AUC of the combined model on the test set.
+    - test_accuracy: float, accuracy of the combined model on the test set.
     ''' 
 
     features_finance_tfidf_train = np.hstack([features_base_train, X_train_tfidf.toarray()])
-    features_finance_tfidf_test  = np.hstack([features_base_test, X_test_tfidf.toarray()])
+    features_finance_tfidf_val = np.hstack([features_base_val, X_val_tfidf.toarray()])
+    features_finance_tfidf_test = np.hstack([features_base_test, X_test_tfidf.toarray()])
 
-    finance_text_model= LogisticRegression(C=1.0,solver='liblinear',max_iter=2000)
-    finance_text_model.fit(features_finance_tfidf_train, y_train)
-    test_probs = finance_text_model.predict_proba(features_finance_tfidf_test)[:, 1]
+    Cs = [0.01, 0.1, 1, 10, 100]
+
+    best_C = None
+    best_model = None
+    best_val_auc = -np.inf
+
+    for C in Cs:
+        finance_text_model = LogisticRegression(C=C, solver='liblinear', max_iter=2000)
+        finance_text_model.fit(features_finance_tfidf_train, y_train)
+        
+        val_probs = finance_text_model.predict_proba(features_finance_tfidf_val)[:, 1]
+        val_auc = roc_auc_score(y_val, val_probs)
+        
+        if val_auc > best_val_auc:
+            best_val_auc = val_auc
+            best_C = C
+            best_model = finance_text_model
+
+    test_probs = best_model.predict_proba(features_finance_tfidf_test)[:, 1]
     test_auc = roc_auc_score(y_test, test_probs)
-    test_accuracy = accuracy_score(y_test, finance_text_model.predict(features_finance_tfidf_test))
+    test_accuracy = accuracy_score(y_test, best_model.predict(features_finance_tfidf_test))
+    print('Best C for Finance + TF-IDF model:', best_C)
 
-    return test_probs,test_auc, test_accuracy
+    return test_probs, test_auc, test_accuracy
 
 def call_baseline_model(df = None, MODEL = "random", RETURNS_PERIOD = 5):
     '''
@@ -367,8 +379,8 @@ def call_baseline_model(df = None, MODEL = "random", RETURNS_PERIOD = 5):
         print(f"TF-IDF Model {RETURNS_PERIOD}-day returns- Accuracy: {best_test_accuracy:.4f}, AUC: {best_test_auc:.4f} ± {se:.4f}, CI: {results['ci']}")
     elif MODEL == "finance_tfidf":
         X_train_tfidf, X_val_tfidf, X_test_tfidf = tfidf_vectorize(train_df, val_df, test_df)
-        logit_tfidf_fin,test_auc, test_accuracy = finance_tfidf_model(X_train_fin, X_train_fin, y_train, X_val_fin, X_val_tfidf, X_test_fin, X_test_fin, y_test,
-                                          X_train_tfidf, X_test_tfidf)
+        logit_tfidf_fin, test_auc, test_accuracy = finance_tfidf_model(X_train_fin, y_train, X_val_fin, y_val, X_val_tfidf,
+                          X_test_fin, y_test, X_train_tfidf, X_test_tfidf)
         results['auc'] = test_auc
         results['accuracy'] = test_accuracy
         ci,se=bootstrap_auc_se(y_test, logit_tfidf_fin)
