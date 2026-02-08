@@ -47,15 +47,15 @@ Binary classification: Market-adjusted return (subtract the market return value)
 |-------|----------|-------------|---------|---------------|
 | random (Baseline) | 0.4751 | (0.4101, 0.5372) | 0.0328 | 1-Day |
 | finance_only (Baseline) | 0.4782 | (0.4132, 0.5437) | 0.0330 | 1-Day |
-| tfidf (Baseline) | 0.5239 | (0.4603, 0.5907) | 0.0334 | 1-Day |
-| finance_tfidf (Baseline) | 0.4630 | (0.4022, 0.5302) | 0.0332 | 1-Day |
+| tfidf (Baseline) | 0.4686 | (0.4047, 0.5373) | 0.0338 | 1-Day |
+| finance_tfidf (Baseline) | 0.4800 | (0.4153, 0.5449) | 0.0332 | 1-Day |
 | AttnMLPPoolClassifier (Transcript Only) | 0.5098 | (0.4413, 0.5808) | 0.0357 | 1-Day |
 | AttnPoolTwoTower (Transcript + Finance) | 0.4263 | (0.3612, 0.4928) | 0.0337 | 1-Day |
 | MeanPoolClassifier (Transcript Only) | 0.4805 | (0.4145, 0.5508) | 0.0350 | 1-Day |
 | random (Baseline) | 0.4470 | (0.3843, 0.5134) | 0.0328 | 5-Day |
 | finance_only (Baseline) | 0.4614 | (0.3907, 0.5256) | 0.0334 | 5-Day |
-| tfidf (Baseline) | 0.6207 | (0.5599, 0.6796) | 0.0306 | 5-Day |
-| finance_tfidf (Baseline) | 0.5406 | (0.4780, 0.6034) | 0.0325 | 5-Day |
+| tfidf (Baseline) | 0.6171 | (0.5586, 0.6756) | 0.0306 | 5-Day |
+| finance_tfidf (Baseline) | 0.5907 | (0.5325, 0.6522) | 0.0315 | 5-Day |
 | AttnMLPPoolClassifier (Transcript Only) | 0.4756 | (0.4066, 0.5424) | 0.0354 | 5-Day |
 | AttnPoolTwoTower (Transcript + Finance) | 0.4821 | (0.4259, 0.5419) | 0.0298 | 5-Day |
 | MeanPoolClassifier (Transcript Only) | 0.5247 | (0.4600, 0.5945) | 0.0341 | 5-Day |
